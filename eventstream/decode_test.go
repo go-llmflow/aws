@@ -80,6 +80,7 @@ func TestRejections(t *testing.T) {
 		{"unknown type 10", frame(hdr(":a", 10), nil), Limits{}, ErrHeader},
 		{"unknown type 255", frame(hdr(":a", 255), nil), Limits{}, ErrHeader},
 		{"name_len 0", frame([]byte{0, 0}, nil), Limits{}, ErrHeader},
+		{"name not UTF-8", frame(hdr("\xc3\x28", 0), nil), Limits{}, ErrHeader},
 		{"string not UTF-8", frame(hdr(":a", 7, 0, 2, 0xc3, 0x28), nil), Limits{}, ErrHeader},
 		{"string overlong UTF-8", frame(hdr(":a", 7, 0, 2, 0xc0, 0x80), nil), Limits{}, ErrHeader},
 		{"name runs past headers_len", frame([]byte{9, 'a', 'b'}, nil), Limits{}, ErrHeader},
@@ -381,6 +382,7 @@ func TestMarshalRejects(t *testing.T) {
 		{"string too long", Message{Headers: []Header{{"a", String(big)}}}, ErrLimit},
 		{"bytes too long", Message{Headers: []Header{{"a", Bytes([]byte(big))}}}, ErrLimit},
 		{"invalid UTF-8", Message{Headers: []Header{{"a", String("\xff")}}}, ErrHeader},
+		{"name not UTF-8", Message{Headers: []Header{{"\xff", Int8(1)}}}, ErrHeader},
 		{"short uuid", Message{Headers: []Header{{"a", Value{set: true, t: TypeUUID, b: []byte{1}}}}}, ErrHeader},
 	}
 	for _, c := range cases {

@@ -230,6 +230,11 @@ func (d *Decoder) parseHeaders(b []byte) ([]Header, error) {
 		if p+nl+1 > len(b) {
 			return nil, fmt.Errorf("%w: header name runs past the header block", ErrHeader)
 		}
+		// The key "is a UTF-8 string" (Transcribe guide); a caller compares
+		// names as text, so an invalid one is refused like an invalid value.
+		if !utf8.Valid(b[p : p+nl]) {
+			return nil, fmt.Errorf("%w: header name is not valid UTF-8", ErrHeader)
+		}
 		name := d.str(b[p : p+nl])
 		p += nl
 		t := Type(b[p])

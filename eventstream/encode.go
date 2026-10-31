@@ -10,14 +10,17 @@ import (
 )
 
 // Marshal returns the wire form of m. It rejects what the decoder would:
-// an empty or over-long (>255) header name, a duplicate name, an invalid
-// Value, a bytes/string value over 32767 bytes, a string that is not UTF-8,
-// and a message whose size does not fit a u32.
+// an empty, over-long (>255) or non-UTF-8 header name, a duplicate name, an
+// invalid Value, a bytes/string value over 32767 bytes, a string that is not
+// UTF-8, and a message whose size does not fit a u32.
 func Marshal(m Message) ([]byte, error) {
 	hl := 0
 	for i, h := range m.Headers {
 		if h.Name == "" || len(h.Name) > maxWireName {
 			return nil, fmt.Errorf("%w: header name of %d bytes", ErrHeader, len(h.Name))
+		}
+		if !utf8.ValidString(h.Name) {
+			return nil, fmt.Errorf("%w: header name is not valid UTF-8", ErrHeader)
 		}
 		for j := 0; j < i; j++ {
 			if m.Headers[j].Name == h.Name {
