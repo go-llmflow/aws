@@ -2,15 +2,17 @@
 
 AWS Signature Version 4 request signing and AWS event-stream decoding, in pure
 Go, **standard library only** (no aws-sdk-go, no cgo). Two generic packages, no
-service-specific code; the [gateway](https://github.com/go-llmflow/gateway) uses
-them for its Amazon Bedrock provider.
+service-specific code. The [gateway](https://github.com/go-llmflow/gateway) will
+use them for its Amazon Bedrock provider (planned:
+[gateway#89](https://github.com/go-llmflow/gateway/issues/89), not released yet).
 
 | package | what |
 |---|---|
 | `github.com/go-llmflow/aws/sigv4` | sign an `*http.Request` with SigV4 (`Authorization` header) |
 | `github.com/go-llmflow/aws/eventstream` | decode the `application/vnd.amazon.eventstream` framing; an encoder for tests and tools |
 
-Status: pre-release (no tag yet).
+Status: [v0.1.0](https://github.com/go-llmflow/aws/releases/tag/v0.1.0), the
+first release (below v1.0.0, a breaking change bumps the minor version).
 
 ## Sources
 
