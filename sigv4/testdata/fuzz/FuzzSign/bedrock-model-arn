@@ -1,0 +1,8 @@
+go test fuzz v1
+string("POST")
+string("https://bedrock-runtime.us-east-1.amazonaws.com/model/arn%3Aaws%3Abedrock%3Aus-east-1%3A1%3Ainference-profile%2Fx/converse-stream")
+string("Content-Type")
+string("application/json")
+[]byte("{}")
+int64(1761913200)
+string("bedrock")

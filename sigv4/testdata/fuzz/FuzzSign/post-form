@@ -1,0 +1,8 @@
+go test fuzz v1
+string("POST")
+string("https://example.amazonaws.com/")
+string("Content-Type")
+string("application/x-www-form-urlencoded; charset=utf-8")
+[]byte("Param1=value1")
+int64(1440938160)
+string("service")

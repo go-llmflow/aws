@@ -1,0 +1,8 @@
+go test fuzz v1
+string("GET")
+string("https://example.amazonaws.com/?Param-3=Value3&Param=Value2&%E1%88%B4=Value1")
+string("")
+string("")
+[]byte("")
+int64(1440938160)
+string("service")

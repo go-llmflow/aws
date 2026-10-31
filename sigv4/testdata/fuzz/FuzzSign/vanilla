@@ -1,0 +1,8 @@
+go test fuzz v1
+string("GET")
+string("https://example.amazonaws.com/")
+string("")
+string("")
+[]byte("")
+int64(1440938160)
+string("service")

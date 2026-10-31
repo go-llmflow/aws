@@ -1,0 +1,8 @@
+go test fuzz v1
+string("GET")
+string("https://h/")
+string("X-A")
+string("1\nx-amz-forged:yes")
+[]byte("")
+int64(-1)
+string("bedrock")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\x00\x00\x00\x87\x00\x00\x00K\x87\xea+\xf3\v:event-type\a\x00\x05chunk\r:content-type\a\x00\x10application/json\r:message-type\a\x00\x05event{\"bytes\":\"eyJ0eXBlIjoibWVzc2FnZV9zdGFydCJ9\"}\x1e\xefF:")
