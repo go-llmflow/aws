@@ -127,8 +127,25 @@ dependency (`cd _bench && go test -bench . -benchmem -cpu 1 -count 10`). `TestSa
 `TestSameWire` check that both sides do the same work. Measured only when the 1-minute load average
 is at most 4.
 
-**Not measured, load 19-47 on 2026-10-31** (the benchmarks compile and run once). Numbers will be
-added here when the machine is idle. What is designed in: no allocation in the HMAC chain
+**Indicative only, not a measurement under the rule above.** These runs, made on 2026-11-01 on an
+Apple M4 Max with one core and `-count 6`/`8`, started at load 3.6–4.3 and ended at 4.4–6.8.
+They will be replaced by an idle run.
+
+| benchmark | ours | aws-sdk-go-v2 | |
+|---|---|---|---|
+| decode 1000 messages of 120 B | 283 µs, 6.0 k allocs | 815 µs, 40 k allocs | 2.9× faster |
+| decode 1000 messages of 8 KiB | 1.27 ms | 2.87 ms | 2.3× faster |
+| decode 1000 messages of 256 KiB | 42.0 ms | 47.6 ms | 1.13× faster |
+| encode one message | 108 ns, 1 alloc | 395 ns, 19 allocs | 3.7× faster |
+| sign a Bedrock request | 2.99 µs, 49 allocs | 2.97 µs, 51 allocs | equal within ±2 % |
+
+Signing was **22 % slower** than the SDK in the first run (3.57 µs against 2.94 µs). The SDK
+derives the signing key once per day and region/service. Ours derived it on every request: four
+HMACs, eight SHA-256 blocks. The cache in `sigv4/keycache.go` closes the gap. It is stricter than
+the SDK's: an entry is keyed by a SHA-256 of the secret too, so two credentials that share an
+access key ID never share a key, and it is bounded to 256 entries.
+
+What is designed in: no allocation in the HMAC chain
 (`hmacSHA256` on the stack for the keys SigV4 uses; checked against `crypto/hmac`), one body
 allocation per message, header names and short string values interned per decoder, CRC-32 through
 `hash/crc32` (hardware accelerated on amd64 and arm64).
