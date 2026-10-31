@@ -1,0 +1,8 @@
+go test fuzz v1
+string("GET")
+string("https://h/?a=%zz")
+string("")
+string("")
+[]byte("")
+int64(1)
+string("bedrock")

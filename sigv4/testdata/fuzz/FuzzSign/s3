@@ -1,0 +1,8 @@
+go test fuzz v1
+string("PUT")
+string("https://h/a%20b//c/../d")
+string("X-Amz-Content-Sha256")
+string("UNSIGNED-PAYLOAD")
+[]byte("x")
+int64(0)
+string("s3")

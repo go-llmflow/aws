@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hash/crc32"
 	"io"
+	"math"
 	"runtime"
 	"strings"
 	"testing"
@@ -339,7 +340,7 @@ func TestPayloadOwnedByCaller(t *testing.T) {
 }
 
 func TestLimitsNormalisation(t *testing.T) {
-	l := Limits{MaxValueLen: 1 << 30, MaxMessage: 1 << 40, MaxHeadersLen: 1 << 40}.norm()
+	l := Limits{MaxValueLen: math.MaxInt, MaxMessage: math.MaxInt, MaxHeadersLen: math.MaxInt}.norm()
 	if l.MaxValueLen != 65535 || l.MaxMessage != 1<<31-1 || l.MaxHeadersLen != 1<<31-1-overhead {
 		t.Fatalf("%+v", l)
 	}
@@ -411,7 +412,7 @@ func TestValueStringAndTypeString(t *testing.T) {
 			t.Errorf("%q != %q", in, want)
 		}
 	}
-	if (Value{}).Valid() ||!Int8(1).Valid() {
+	if (Value{}).Valid() || !Int8(1).Valid() {
 		t.Fatal("Valid")
 	}
 	for ty, want := range map[Type]string{TypeTrue: "bool", TypeFalse: "bool", TypeInt8: "int8", TypeInt16: "int16",

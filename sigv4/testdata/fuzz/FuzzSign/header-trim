@@ -1,0 +1,8 @@
+go test fuzz v1
+string("GET")
+string("https://example.amazonaws.com/")
+string("My-Header2")
+string("  \"a   b   c\"  ")
+[]byte("")
+int64(1440938160)
+string("service")
