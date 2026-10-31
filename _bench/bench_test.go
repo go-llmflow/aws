@@ -174,31 +174,51 @@ func BenchmarkSign(b *testing.B) {
 	})
 }
 
-// TestSameSignature guards the comparison: both implementations must agree on
-// the signature, otherwise the numbers compare different work.
+// TestSameSignature guards the comparison (both implementations must agree,
+// otherwise the numbers compare different work), and it is the independent
+// witness for the paths go-llmflow/gateway signs for Bedrock: a model ID in
+// the path is percent-encoded once by the caller (":" as %3A, "/" as %2F) and
+// SigV4 encodes it again for a non-S3 service. A fake server that verifies
+// with this same library cannot see a double-encoding mistake; the SDK can.
+// CI runs it (the "sdk-witness" job).
 func TestSameSignature(t *testing.T) {
 	sum := sha256.Sum256(body)
 	hash := hex.EncodeToString(sum[:])
-	mk := func() *http.Request {
-		r, _ := http.NewRequest("POST", target, nil)
-		r.Header.Set("Content-Type", "application/json")
-		return r
+	const host = "https://bedrock-runtime.eu-west-3.amazonaws.com"
+	targets := map[string]string{
+		"converse-stream, base model":   target,
+		"invoke, base model":            host + "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/invoke",
+		"stream, EU inference profile":  host + "/model/eu.anthropic.claude-sonnet-4-5-20250929-v1%3A0/invoke-with-response-stream",
+		"invoke, inference-profile ARN": host + "/model/arn%3Aaws%3Abedrock%3Aeu-west-3%3A123456789012%3Ainference-profile%2Feu.anthropic.claude-sonnet-4-5-20250929-v1%3A0/invoke",
 	}
-	ours := mk()
-	s := sigv4.Signer{
-		Credentials: sigv4.Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", SessionToken: "tok"},
-		Region:      "us-east-1", Service: "bedrock",
-	}
-	if err := s.Sign(ours, body, signTime); err != nil {
-		t.Fatal(err)
-	}
-	theirs := mk()
-	creds := aws.Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", SessionToken: "tok"}
-	if err := v4.NewSigner().SignHTTP(context.Background(), creds, theirs, hash, "bedrock", "us-east-1", signTime); err != nil {
-		t.Fatal(err)
-	}
-	if a, b := ours.Header.Get("Authorization"), theirs.Header.Get("Authorization"); a != b {
-		t.Fatalf("signatures differ:\n ours %s\n  sdk %s", a, b)
+	for name, u := range targets {
+		for _, tok := range []string{"", "tok"} {
+			mk := func() *http.Request {
+				r, err := http.NewRequest("POST", u, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				r.Header.Set("Content-Type", "application/json")
+				r.Header.Set("Accept", "application/vnd.amazon.eventstream")
+				return r
+			}
+			ours := mk()
+			s := sigv4.Signer{
+				Credentials: sigv4.Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", SessionToken: tok},
+				Region:      "eu-west-3", Service: "bedrock",
+			}
+			if err := s.Sign(ours, body, signTime); err != nil {
+				t.Fatal(err)
+			}
+			theirs := mk()
+			creds := aws.Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", SessionToken: tok}
+			if err := v4.NewSigner().SignHTTP(context.Background(), creds, theirs, hash, "bedrock", "eu-west-3", signTime); err != nil {
+				t.Fatal(err)
+			}
+			if a, b := ours.Header.Get("Authorization"), theirs.Header.Get("Authorization"); a != b {
+				t.Errorf("%s (token %q): signatures differ:\n ours %s\n  sdk %s", name, tok, a, b)
+			}
+		}
 	}
 }
 

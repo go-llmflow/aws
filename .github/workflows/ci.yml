@@ -94,6 +94,22 @@ jobs:
       - name: fuzz
         run: go test -run='^$' -fuzz='^${{ matrix.target }}$' -fuzztime=30s ${{ matrix.pkg }}
 
+  # The independent witness: the same requests signed and the same streams
+  # encoded by aws-sdk-go-v2 must give identical bytes (the _bench module,
+  # which carries the SDK dependency the library itself does not).
+  sdk-witness:
+    name: agree with aws-sdk-go-v2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+      - name: same signature, same wire
+        working-directory: _bench
+        run: go test -count=1 -run '^TestSame' ./...
+
   govulncheck:
     runs-on: ubuntu-latest
     steps:
