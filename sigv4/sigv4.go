@@ -164,7 +164,7 @@ func (s Signer) Sign(req *http.Request, body []byte, now time.Time) error {
 	sts := StringToSign(now, scope, canonical)
 
 	var key, sig [32]byte
-	s.signingKey(&key, now)
+	s.cachedSigningKey(&key, now)
 	hmacSHA256(&sig, key[:], []byte(sts))
 
 	var b strings.Builder
