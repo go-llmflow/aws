@@ -127,23 +127,35 @@ dependency (`cd _bench && go test -bench . -benchmem -cpu 1 -count 10`). `TestSa
 `TestSameWire` check that both sides do the same work. Measured only when the 1-minute load average
 is at most 4.
 
-**Indicative only, not a measurement under the rule above.** These runs, made on 2026-11-01 on an
-Apple M4 Max with one core and `-count 6`/`8`, started at load 3.6–4.3 and ended at 4.4–6.8.
-They will be replaced by an idle run.
+**Measured 2026-11-03** on an Apple M4 Max, one core (`GOMAXPROCS=1`), with
+go-fleettools `abbench`. Ours and the SDK run **alternately**, round by round,
+from one test binary (`--base-arg`/`--head-arg` pick the sub-benchmark). Every
+round waits for a 1-minute load ≤ 4 and is discarded as a pair if the load ends
+above 4. Each series has 10 kept rounds; the third column is `benchstat`'s
+difference (all p ≤ 0.002 unless stated).
 
 | benchmark | ours | aws-sdk-go-v2 | |
 |---|---|---|---|
-| decode 1000 messages of 120 B | 283 µs, 6.0 k allocs | 815 µs, 40 k allocs | 2.9× faster |
-| decode 1000 messages of 8 KiB | 1.27 ms | 2.87 ms | 2.3× faster |
-| decode 1000 messages of 256 KiB | 42.0 ms | 47.6 ms | 1.13× faster |
-| encode one message | 108 ns, 1 alloc | 395 ns, 19 allocs | 3.7× faster |
-| sign a Bedrock request | 2.99 µs, 49 allocs | 2.97 µs, 51 allocs | equal within ±2 % |
+| decode 1000 messages of 120 B | 287.8 µs, 6.0 k allocs | 811.6 µs, 40.0 k allocs | 2.8× faster |
+| decode 1000 messages of 8 KiB | 1.265 ms, 6.0 k allocs | 2.881 ms, 44.0 k allocs | 2.3× faster |
+| decode 1000 messages of 256 KiB | 42.87 ms, 9.0 k allocs | 47.05 ms, 49.0 k allocs | 1.10× faster |
+| sign a Bedrock request | 2.940 µs, 48 allocs | 3.001 µs, 51 allocs | 2.0 % faster |
 
-Signing was **22 % slower** than the SDK in the first run (3.57 µs against 2.94 µs). The SDK
-derives the signing key once per day and region/service. Ours derived it on every request: four
-HMACs, eight SHA-256 blocks. The cache in `sigv4/keycache.go` closes the gap. It is stricter than
-the SDK's: an entry is keyed by a SHA-256 of the secret too, so two credentials that share an
-access key ID never share a key, and it is bounded to 256 entries.
+**Signing took two fixes to stop being slower.**
+1. The first run (2026-11-01, indicative: load ended at 4.4–6.8) had signing **22 % slower**
+   than the SDK. The SDK derives the signing key once per day and region/service; ours derived
+   it on every request, four HMACs over eight SHA-256 blocks. v0.1.1 added the cache in
+   `sigv4/keycache.go`.
+2. The first clean run of that cache (2026-11-03) still had signing **1.7 % slower**
+   (2.916 µs against 2.865 µs, p = 0.029). The cache key was a SHA-256 of the secret, one
+   block per request.
+3. The key is now a `hash/maphash` hash with a seed drawn once per process, plus the day as an
+   integer instead of a formatted string. It is still stricter than the SDK's cache: two
+   credentials sharing an access key ID never share an entry (only a 2⁻⁶⁴ hash collision
+   could make them), the cache is bounded to 256 entries, and it holds no secret.
+
+Encoding (one message, 3.7× faster, 1 allocation against 19) was only measured in the
+indicative run of 2026-11-01.
 
 What is designed in: no allocation in the HMAC chain
 (`hmacSHA256` on the stack for the keys SigV4 uses; checked against `crypto/hmac`), one body
